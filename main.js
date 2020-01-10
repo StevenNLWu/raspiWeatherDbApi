@@ -1,33 +1,13 @@
 const Express = require("express");
 const BodyParser = require("body-parser");
 const MongoClient = require("mongodb").MongoClient;
+const timeFormat = require("./timeFormat");
+const queryer = require("./queryer");
 
 var app = Express();
 var dbConfig = require('./dbConfig');
 app.use(BodyParser.json());
 app.use(BodyParser.urlencoded({ extended: true }));
-
-
-function getCurrentLocaltimeInIso(replaceMSecond){
-    var tzoffset = (new Date()).getTimezoneOffset() * 60000; //offset in milliseconds
-    var localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, -1);
-    
-    if(replaceMSecond)
-        return localISOTime.replace(/\..+/, '');
-
-    return localISOTime;
-}
-
-function convert2IsoInLocaltimeZone(datetime, replaceMSecond){
-    var tzoffset = datetime.getTimezoneOffset() * 60000; //offset in milliseconds
-    var localISOTime = (new Date(datetime - tzoffset)).toISOString().slice(0, -1);
-    
-    if(replaceMSecond)
-        return localISOTime.replace(/\..+/, '');
-
-    return localISOTime;
-}
-
 
 
 app.listen(5000, () => {
@@ -38,43 +18,50 @@ app.listen(5000, () => {
             throw error;
         }
         database = client.db(dbConfig.DATABASE_NAME);
-        collection = database.collection("weather_data");
-        console.log( getCurrentLocaltimeInIso(true)
+        collection = database.collection(dbConfig.COLLECTION);
+        console.log( timeFormat.getCurrentLocaltimeInIso(true)
                     + ": " 
                     +"Connected to DB `" + dbConfig.DATABASE_NAME + "`.");
     });
 });
 
 app.get("/weather", (request, response) =>{
-    collection.find({}).toArray((error, result) =>{
-        if(error){
-            return  response.status(500).send(error);
-        }
-        response.send(result);
-    });
-});
+    paraRange = request.query.dtRange;
+    dtNow = new Date;
 
-app.get("/weather/:dtRange", (request, response) =>{
-    dtRange = request.params.dtRange;
-    dtQuerryUntil = new Date()
-    switch(dtRange){
+    console.log( timeFormat.convert2IsoInLocaltimeZone(dtNow, true)
+                    + ": " 
+                    + "Get /weather, param={" + paraRange + "}" 
+                );
+
+    switch(paraRange){
         case '1h':
-            dtQuerryUntil.setTime(dtQuerryUntil.getTime()- 1*60*60*1000);    // in milliseconds
+            queryer.get1hWeather(response, dtNow);
             break;
+        case '12h':
+            queryer.get12hWeather(response, dtNow);
+            break;   
+        case '1d':
+            queryer.get1dWeather(response, dtNow);
+            break;   
+        case '7d':
+            queryer.get7dWeather(response, dtNow);
+            break;       
+        case '1m':
+            queryer.get1mWeather(response, dtNow);
+            break;  
+        case '6m':
+            queryer.get6mWeather(response, dtNow);
+            break;                            
+        case '1y':
+            queryer.get1yWeather(response, dtNow);
+            break;            
         default:
-            dtQuerryUntil.setTime(dtQuerryUntil.getTime() - 1*60*60*1000);
+            response.send("invalid paramter")
+            console.log( timeFormat.convert2IsoInLocaltimeZone(dtNow, true)
+                        + ": " 
+                        + "Get /weather, param={" + paraRange + "}; invalid paramter." 
+                    );   
     }
 
-    console.log( convert2IsoInLocaltimeZone(dtQuerryUntil, true));
-    console.log( getCurrentLocaltimeInIso(true));
-    collection.find({
-            "uploadDatetime":{
-                "$gte": convert2IsoInLocaltimeZone(dtQuerryUntil, true), "$lte": getCurrentLocaltimeInIso(true)
-            }
-        }).toArray((error, result) =>{
-        if(error){
-            return  response.status(500).send(error);
-        }
-        response.send(result);
-    });
 });
