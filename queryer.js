@@ -203,12 +203,48 @@ module.exports = {
         dtFrom = new Date();
         dtFrom.setFullYear(dtNow.getFullYear() - 1);    // minus 1 year
 
-        collection.find({
-            "uploadDatetime":{
-                "$gte": timeFormat.convert2IsoInLocaltimeZone(dtFrom, true), 
-                "$lte": timeFormat.getCurrentLocaltimeInIso(true)
+        collection.aggregate([{
+            $match: {
+                "uploadDatetime":{
+                    "$gte": timeFormat.convert2IsoInLocaltimeZone(dtFrom, true), 
+                    "$lte": timeFormat.getCurrentLocaltimeInIso(true)
+                }
             }
-        }).toArray((error, result) =>{
+        },
+        {
+            $addFields: {
+                "2dateTime":{
+                    "$dateFromString": { 
+                        "dateString": "$uploadDatetime"
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                _id: "$id",
+                year: { $year: "$2dateTime" },
+                month: { $month: "$2dateTime" },
+                day: { $dayOfMonth: "$2dateTime" },
+                temperature: "$temperature"
+            }
+        },
+        {
+            $group: {
+                _id:{
+                      year: "$year",
+                      month: "$month",
+                      day: "$day",
+                },
+                avgTemp:{ $avg: "$temperature" },
+            }
+        },
+        {
+            $sort: {
+                _id:-1
+            }
+        }
+        ]).toArray((error, result) =>{
             if(error){
 
                 console.log( timeFormat.convert2IsoInLocaltimeZone(dtNow, true)
