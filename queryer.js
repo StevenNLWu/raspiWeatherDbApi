@@ -171,12 +171,7 @@ module.exports = {
         dtFrom = new Date();
         dtFrom.setMonth(dtNow.getMonth() - 6);    // minus 6 month
 
-        collection.find({
-            "uploadDatetime":{
-                "$gte": timeFormat.convert2IsoInLocaltimeZone(dtFrom, true), 
-                "$lte": timeFormat.getCurrentLocaltimeInIso(true)
-            }
-        }).toArray((error, result) =>{
+        module.exports.samplingByday(dtFrom).toArray((error, result) =>{
             if(error){
 
                 console.log( timeFormat.convert2IsoInLocaltimeZone(dtNow, true)
@@ -203,48 +198,7 @@ module.exports = {
         dtFrom = new Date();
         dtFrom.setFullYear(dtNow.getFullYear() - 1);    // minus 1 year
 
-        collection.aggregate([{
-            $match: {
-                "uploadDatetime":{
-                    "$gte": timeFormat.convert2IsoInLocaltimeZone(dtFrom, true), 
-                    "$lte": timeFormat.getCurrentLocaltimeInIso(true)
-                }
-            }
-        },
-        {
-            $addFields: {
-                "2dateTime":{
-                    "$dateFromString": { 
-                        "dateString": "$uploadDatetime"
-                    }
-                }
-            }
-        },
-        {
-            $project: {
-                _id: "$id",
-                year: { $year: "$2dateTime" },
-                month: { $month: "$2dateTime" },
-                day: { $dayOfMonth: "$2dateTime" },
-                temperature: "$temperature"
-            }
-        },
-        {
-            $group: {
-                _id:{
-                      year: "$year",
-                      month: "$month",
-                      day: "$day",
-                },
-                avgTemp:{ $avg: "$temperature" },
-            }
-        },
-        {
-            $sort: {
-                _id:-1
-            }
-        }
-        ]).toArray((error, result) =>{
+        module.exports.samplingByday(dtFrom).toArray((error, result) =>{
             if(error){
 
                 console.log( timeFormat.convert2IsoInLocaltimeZone(dtNow, true)
@@ -261,4 +215,56 @@ module.exports = {
         });
     },
 
-}
+
+    samplingByday : function (dtFrom){
+        return  collection.aggregate([{
+                    $match: {   // filter by date range
+                            "uploadDatetime":{
+                                "$gte": timeFormat.convert2IsoInLocaltimeZone(dtFrom, true), 
+                                "$lte": timeFormat.getCurrentLocaltimeInIso(true)
+                            }
+                        }
+                    },
+                    {   // string to datetime
+                        $addFields: {
+                            "2dateTime":{
+                                "$dateFromString": { 
+                                    "dateString": "$uploadDatetime"
+                                }
+                            }
+                        }
+                    },
+                    {   // prepare to group by day
+                        $project: {
+                            _id: "$id",
+                            year: { $year: "$2dateTime" },
+                            month: { $month: "$2dateTime" },
+                            day: { $dayOfMonth: "$2dateTime" },
+                            temperature: "$temperature",
+                            humidity: "$humidity",
+                            pressure: "$pressure"
+                        }
+                    },
+                    {   // group by day
+                        $group: {
+                            _id:{
+                                year: "$year",
+                                month: "$month",
+                                day: "$day",
+                            },
+                            avgTemp: { $avg: "$temperature" },
+                            avgHumi: { $avg: "$humidity"},
+                            avgAvg: { $avg: "$pressure"}             
+                        }
+                    },
+                    {   // sort by datetime
+                        $sort: {
+                            _id:-1
+                        }
+                    }
+                ])
+    }
+
+
+} // end of export
+
