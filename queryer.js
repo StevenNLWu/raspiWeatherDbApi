@@ -108,12 +108,7 @@ module.exports = {
         dtFrom = new Date();
         dtFrom.setTime( dtNow.getTime() - 7 * 86400000 );    // minus 7 day
 
-        collection.find({
-            "uploadDatetime":{
-                "$gte": timeFormat.convert2IsoInLocaltimeZone(dtFrom, true), 
-                "$lte": timeFormat.getCurrentLocaltimeInIso(true)
-            }
-        }).toArray((error, result) =>{
+        module.exports.samplingPerHour(dtFrom, dtNow).toArray((error, result) =>{
             if(error){
                 console.log( timeFormat.convert2IsoInLocaltimeZone(dtNow, true)
                             + ": " 
@@ -139,7 +134,7 @@ module.exports = {
         dtFrom = new Date();
         dtFrom.setMonth(dtNow.getMonth() - 1);    // minus 1 month
 
-        module.exports.samplingBy2hr(dtFrom, dtNow).toArray((error, result) =>{
+        module.exports.samplingPer2hr(dtFrom, dtNow).toArray((error, result) =>{
                 if(error){
 
                     console.log( timeFormat.convert2IsoInLocaltimeZone(dtNow, true)
@@ -166,7 +161,7 @@ module.exports = {
         dtFrom = new Date();
         dtFrom.setMonth(dtNow.getMonth() - 6);    // minus 6 month
 
-        module.exports.samplingByday(dtFrom, dtNow).toArray((error, result) =>{
+        module.exports.samplingPerday(dtFrom, dtNow).toArray((error, result) =>{
             if(error){
 
                 console.log( timeFormat.convert2IsoInLocaltimeZone(dtNow, true)
@@ -193,7 +188,7 @@ module.exports = {
         dtFrom = new Date();
         dtFrom.setFullYear(dtNow.getFullYear() - 1);    // minus 1 year
 
-        module.exports.samplingByday(dtFrom, dtNow).toArray((error, result) =>{
+        module.exports.samplingPerday(dtFrom, dtNow).toArray((error, result) =>{
             if(error){
 
                 console.log( timeFormat.convert2IsoInLocaltimeZone(dtNow, true)
@@ -211,7 +206,7 @@ module.exports = {
     },
 
 
-    samplingByday : function (dtFrom, dtTo){
+    samplingPerDay : function (dtFrom, dtTo){
         return  collection.aggregate([{
                     $match: {   // filter by date range
                             "uploadDatetime":{
@@ -258,9 +253,9 @@ module.exports = {
                         }
                     }
                 ])
-    }, // samplingByday
+    }, // samplingPerDay
 
-    samplingBy2hr : function (dtFrom, dtTo){
+    samplingPer2hr : function (dtFrom, dtTo){
         return  collection.aggregate([{
                     $match: {   // filter by date range
                             "uploadDatetime":{
@@ -312,7 +307,60 @@ module.exports = {
                         }
                     }
                 ])
-    }, // samplingBy2hr
+    }, // samplingPer2hr
+
+    samplingPerHour : function (dtFrom, dtTo){
+        return  collection.aggregate([{
+                    $match: {   // filter by date range
+                            "uploadDatetime":{
+                                "$gte": timeFormat.convert2IsoInLocaltimeZone(dtFrom, true), 
+                                "$lte": timeFormat.convert2IsoInLocaltimeZone(dtTo, true), 
+                            }
+                        }
+                    },
+                    {   // string to datetime
+                        $addFields: {
+                            "2dateTime":{
+                                "$dateFromString": { 
+                                    "dateString": "$uploadDatetime"
+                                }
+                            }
+                        }
+                    },
+                    {   // prepare to group by day
+                        $project: {
+                            _id: "$id",
+                            year: { $year: "$2dateTime" },
+                            month: { $month: "$2dateTime" },
+                            day: { $dayOfMonth: "$2dateTime" },
+                            hr:{"$hour":"$2dateTime"},
+                            temperature: "$temperature",
+                            humidity: "$humidity",
+                            pressure: "$pressure"
+                        }
+                    },
+                    {   // group by day
+                        $group: {
+                            _id:{
+                                year: "$year",
+                                month: "$month",
+                                day: "$day",
+                                hour: "$hr",
+                            },
+                            avgTemp: { $avg: "$temperature" },
+                            avgHum: { $avg: "$humidity"},
+                            avgAvg: { $avg: "$pressure"}             
+                        }
+                    },
+                    {   // sort by datetime
+                        $sort: {
+                            _id:-1
+                        }
+                    }
+                ])
+    }, // samplingPerHour
+
+ 
 
 
 } // end of export
