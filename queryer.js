@@ -76,12 +76,7 @@ module.exports = {
         dtFrom = new Date();
         dtFrom.setTime( dtNow.getTime() - 1 * 86400000 );    // minus 1 day
 
-        collection.find({
-            "uploadDatetime":{
-                "$gte": timeFormat.convert2IsoInLocaltimeZone(dtFrom, true), 
-                "$lte": timeFormat.getCurrentLocaltimeInIso(true)
-            }
-        }).toArray((error, result) =>{
+        module.exports.samplingPer5min(dtFrom, dtNow).toArray((error, result) =>{
             if(error){
 
                 console.log( timeFormat.convert2IsoInLocaltimeZone(dtNow, true)
@@ -273,7 +268,7 @@ module.exports = {
                             }
                         }
                     },
-                    {   // prepare to group by day
+                    {   // prepare to group by 2hr
                         $project: {
                             _id: "$id",
                             year: { $year: "$2dateTime" },
@@ -288,7 +283,7 @@ module.exports = {
                             pressure: "$pressure"
                         }
                     },
-                    {   // group by day
+                    {   // group by 2hr
                         $group: {
                             _id:{
                                 year: "$year",
@@ -327,7 +322,7 @@ module.exports = {
                             }
                         }
                     },
-                    {   // prepare to group by day
+                    {   // prepare to group by hour
                         $project: {
                             _id: "$id",
                             year: { $year: "$2dateTime" },
@@ -339,7 +334,7 @@ module.exports = {
                             pressure: "$pressure"
                         }
                     },
-                    {   // group by day
+                    {   // group by hour
                         $group: {
                             _id:{
                                 year: "$year",
@@ -360,6 +355,61 @@ module.exports = {
                 ])
     }, // samplingPerHour
 
+    samplingPer5min : function (dtFrom, dtTo){
+        return  collection.aggregate([{
+                    $match: {   // filter by date range
+                            "uploadDatetime":{
+                                "$gte": timeFormat.convert2IsoInLocaltimeZone(dtFrom, true), 
+                                "$lte": timeFormat.convert2IsoInLocaltimeZone(dtTo, true), 
+                            }
+                        }
+                    },
+                    {   // string to datetime
+                        $addFields: {
+                            "2dateTime":{
+                                "$dateFromString": { 
+                                    "dateString": "$uploadDatetime"
+                                }
+                            }
+                        }
+                    },
+                    {   // prepare to group 5min
+                        $project: {
+                            _id: "$id",
+                            year: { $year: "$2dateTime" },
+                            month: { $month: "$2dateTime" },
+                            day: { $dayOfMonth: "$2dateTime" },
+                            hr: {"$hour":"$2dateTime"},
+                            min: {"$minute":"$2dateTime"},  
+                            "min/5": {$floor:{
+                                $divide: [{"$minute":"$2dateTime"}, 5]
+                            }},                
+                            temperature: "$temperature",
+                            humidity: "$humidity",
+                            pressure: "$pressure"
+                        }
+                    },
+                    {   // group by 5min
+                        $group: {
+                            _id:{
+                                year: "$year",
+                                month: "$month",
+                                day: "$day",
+                                hr: "$hr",
+                                "min/5": "$min/5"
+                            },
+                            avgTemp: { $avg: "$temperature" },
+                            avgHum: { $avg: "$humidity"},
+                            avgAvg: { $avg: "$pressure"}             
+                        }
+                    },
+                    {   // sort by datetime
+                        $sort: {
+                            _id:-1
+                        }
+                    }
+                ])
+    }, // samplingPer5min
  
 
 
