@@ -44,12 +44,7 @@ module.exports = {
         dtFrom = new Date();
         dtFrom.setTime(dtNow.getTime() - 12*60*60*1000);    // in milliseconds; minus 12 hour
 
-        collection.find({
-            "uploadDatetime":{
-                "$gte": timeFormat.convert2IsoInLocaltimeZone(dtFrom, true), 
-                "$lte": timeFormat.getCurrentLocaltimeInIso(true)
-            }
-        }).toArray((error, result) =>{
+        module.exports.samplingPer2min(dtFrom, dtNow).toArray((error, result) =>{
             if(error){
 
                 console.log( timeFormat.convert2IsoInLocaltimeZone(dtNow, true)
@@ -411,7 +406,172 @@ module.exports = {
                 ])
     }, // samplingPer5min
  
-
+    samplingPer2min : function (dtFrom, dtTo){
+        return  collection.aggregate([{
+                    $match: {   // filter by date range
+                            "uploadDatetime":{
+                                "$gte": timeFormat.convert2IsoInLocaltimeZone(dtFrom, true), 
+                                "$lte": timeFormat.convert2IsoInLocaltimeZone(dtTo, true), 
+                            }
+                        }
+                    },
+                    {   // string to datetime
+                        $addFields: {
+                            "2dateTime":{
+                                "$dateFromString": { 
+                                    "dateString": "$uploadDatetime"
+                                }
+                            }
+                        }
+                    },
+                    {   // prepare to group 2min
+                        $project: {
+                            _id: "$id",
+                            year: { $year: "$2dateTime" },
+                            month: { $month: "$2dateTime" },
+                            day: { $dayOfMonth: "$2dateTime" },
+                            hr: {"$hour":"$2dateTime"},
+                            min: {"$minute":"$2dateTime"},  
+                            "min/2": {$floor:{
+                                $divide: [{"$minute":"$2dateTime"}, 2]
+                            }},                
+                            temperature: "$temperature",
+                            humidity: "$humidity",
+                            pressure: "$pressure"
+                        }
+                    },
+                    {   // group by 2min
+                        $group: {
+                            _id:{
+                                year: "$year",
+                                month: "$month",
+                                day: "$day",
+                                hr: "$hr",
+                                "min/2": "$min/2"
+                            },
+                            avgTemp: { $avg: "$temperature" },
+                            avgHum: { $avg: "$humidity"},
+                            avgAvg: { $avg: "$pressure"}             
+                        }
+                    },
+                    {   // sort by datetime
+                        $sort: {
+                            _id:-1
+                        }
+                    }
+                ])
+    }, // samplingPer2min
+    samplingPer5min : function (dtFrom, dtTo){
+        return  collection.aggregate([{
+                    $match: {   // filter by date range
+                            "uploadDatetime":{
+                                "$gte": timeFormat.convert2IsoInLocaltimeZone(dtFrom, true), 
+                                "$lte": timeFormat.convert2IsoInLocaltimeZone(dtTo, true), 
+                            }
+                        }
+                    },
+                    {   // string to datetime
+                        $addFields: {
+                            "2dateTime":{
+                                "$dateFromString": { 
+                                    "dateString": "$uploadDatetime"
+                                }
+                            }
+                        }
+                    },
+                    {   // prepare to group 5min
+                        $project: {
+                            _id: "$id",
+                            year: { $year: "$2dateTime" },
+                            month: { $month: "$2dateTime" },
+                            day: { $dayOfMonth: "$2dateTime" },
+                            hr: {"$hour":"$2dateTime"},
+                            min: {"$minute":"$2dateTime"},  
+                            "min/5": {$floor:{
+                                $divide: [{"$minute":"$2dateTime"}, 5]
+                            }},                
+                            temperature: "$temperature",
+                            humidity: "$humidity",
+                            pressure: "$pressure"
+                        }
+                    },
+                    {   // group by 5min
+                        $group: {
+                            _id:{
+                                year: "$year",
+                                month: "$month",
+                                day: "$day",
+                                hr: "$hr",
+                                "min/5": "$min/5"
+                            },
+                            avgTemp: { $avg: "$temperature" },
+                            avgHum: { $avg: "$humidity"},
+                            avgAvg: { $avg: "$pressure"}             
+                        }
+                    },
+                    {   // sort by datetime
+                        $sort: {
+                            _id:-1
+                        }
+                    }
+                ])
+    }, // samplingPer5min
+ 
+    samplingPermin : function (dtFrom, dtTo){
+        return  collection.aggregate([{
+                    $match: {   // filter by date range
+                            "uploadDatetime":{
+                                "$gte": timeFormat.convert2IsoInLocaltimeZone(dtFrom, true), 
+                                "$lte": timeFormat.convert2IsoInLocaltimeZone(dtTo, true), 
+                            }
+                        }
+                    },
+                    {   // string to datetime
+                        $addFields: {
+                            "2dateTime":{
+                                "$dateFromString": { 
+                                    "dateString": "$uploadDatetime"
+                                }
+                            }
+                        }
+                    },
+                    {   // prepare to group 2min
+                        $project: {
+                            _id: "$id",
+                            year: { $year: "$2dateTime" },
+                            month: { $month: "$2dateTime" },
+                            day: { $dayOfMonth: "$2dateTime" },
+                            hr: {"$hour":"$2dateTime"},
+                            min: {"$minute":"$2dateTime"},  
+                            "min/2": {$floor:{
+                                $divide: [{"$minute":"$2dateTime"}, 2]
+                            }},                
+                            temperature: "$temperature",
+                            humidity: "$humidity",
+                            pressure: "$pressure"
+                        }
+                    },
+                    {   // group by 2min
+                        $group: {
+                            _id:{
+                                year: "$year",
+                                month: "$month",
+                                day: "$day",
+                                hr: "$hr",
+                                "min/2": "$min/2"
+                            },
+                            avgTemp: { $avg: "$temperature" },
+                            avgHum: { $avg: "$humidity"},
+                            avgAvg: { $avg: "$pressure"}             
+                        }
+                    },
+                    {   // sort by datetime
+                        $sort: {
+                            _id:-1
+                        }
+                    }
+                ])
+    }, // samplingPer2min
 
 } // end of export
 
