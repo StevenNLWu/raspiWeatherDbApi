@@ -1,8 +1,10 @@
 const Express = require("express");
 const BodyParser = require("body-parser");
 const MongoClient = require("mongodb").MongoClient;
-const timeFormat = require("./timeFormat");
-const queryer = require("./queryer");
+const Timer = require("./timer");
+const timer = new Timer();
+const Queryer = require("./queryer");
+const queryer = new Queryer();
 
 var app = Express();
 var dbConfig = require('./dbConfig');
@@ -19,17 +21,17 @@ app.listen(5000, () => {
         }
         database = client.db(dbConfig.DATABASE_NAME);
         collection = database.collection(dbConfig.COLLECTION);
-        console.log( timeFormat.getCurrentLocaltimeInIso(true)
+        console.log( timer.getCurrentLocaltimeInIso(true)
                     + ": " 
                     +"Connected to DB `" + dbConfig.DATABASE_NAME + "`.");
     });
 });
 
 app.get("/weather", (request, response) =>{
-    paraRange = request.query.dtRange;
-    dtNow = new Date;
+    let paraRange = request.query.dtRange;
+    let dtNow = new Date;
 
-    console.log( timeFormat.convert2IsoInLocaltimeZone(dtNow, true)
+    console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                     + ": " 
                     + "Get /weather, param={" + paraRange + "}" 
                 );
@@ -58,7 +60,7 @@ app.get("/weather", (request, response) =>{
             break;            
         default:
             response.send("invalid paramter")
-            console.log( timeFormat.convert2IsoInLocaltimeZone(dtNow, true)
+            console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                         + ": " 
                         + "Get /weather, param={" + paraRange + "}; invalid paramter." 
                     );   
