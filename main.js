@@ -17,23 +17,46 @@ app.listen(5000, () => {
                                                 {useNewUrlParser: true },
                                                 (error, client) => {
         if(error) {
+
+            console.log( timer.getCurrentLocaltimeInIso(true)
+                        + ": " 
+                        +"Fail to Connect DB `" + dbConfig.CONNECTION_URL + "`.");
+
             throw error;
         }
         database = client.db(dbConfig.DATABASE_NAME);
         collection = database.collection(dbConfig.COLLECTION);
         console.log( timer.getCurrentLocaltimeInIso(true)
                     + ": " 
-                    +"Connected to DB `" + dbConfig.DATABASE_NAME + "`.");
+                    +"Connected to DB `" + dbConfig.CONNECTION_URL + "`.");
     });
 });
 
+// handle: No 'Access-Control-Allow-Origin' - Node / Apache Port Issue
+app.use(function (req, res, next) {
+
+    // Website you wish to allow to connect
+    res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
+    // Request methods you wish to allow
+    res.setHeader('Access-Control-Allow-Methods', 'GET') //other option: POST, OPTIONS, PUT, PATCH, DELETE');
+    // Request headers you wish to allow
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
+    // Set to true if you need the website to include cookies in the requests sent
+    // to the API (e.g. in case you use sessions)
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    // Pass to next layer of middleware
+    next();
+});
+
+
 app.get("/weather", (request, response) =>{
+
     let paraRange = request.query.dtRange;
     let dtNow = new Date;
 
     console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                     + ": " 
-                    + "Get /weather, param={" + paraRange + "}" 
+                    + "visiting /weather, param={" + paraRange + "}" 
                 );
 
     switch(paraRange){
@@ -62,7 +85,7 @@ app.get("/weather", (request, response) =>{
             response.send("invalid paramter")
             console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                         + ": " 
-                        + "Get /weather, param={" + paraRange + "}; invalid paramter." 
+                        + "Fail; Get /weather, param={" + paraRange + "}; invalid paramter." 
                     );   
     }
 

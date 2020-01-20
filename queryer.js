@@ -56,7 +56,7 @@ module.exports = class Queryer{
                             },
                             avgTemp: { $avg: "$temperature" },
                             avgHum: { $avg: "$humidity"},
-                            avgAvg: { $avg: "$pressure"}             
+                            avgPrs: { $avg: "$pressure"}             
                         }
                     },
                     {   // sort by datetime
@@ -112,7 +112,7 @@ module.exports = class Queryer{
                             },
                             avgTemp: { $avg: "$temperature" },
                             avgHum: { $avg: "$humidity"},
-                            avgAvg: { $avg: "$pressure"}             
+                            avgPrs: { $avg: "$pressure"}             
                         }
                     },
                     {   // sort by datetime
@@ -168,7 +168,7 @@ module.exports = class Queryer{
                             },
                             avgTemp: { $avg: "$temperature" },
                             avgHum: { $avg: "$humidity"},
-                            avgAvg: { $avg: "$pressure"}             
+                            avgPrs: { $avg: "$pressure"}             
                         }
                     },
                     {   // sort by datetime
@@ -219,7 +219,7 @@ module.exports = class Queryer{
                             },
                             avgTemp: { $avg: "$temperature" },
                             avgHum: { $avg: "$humidity"},
-                            avgAvg: { $avg: "$pressure"}             
+                            avgPrs: { $avg: "$pressure"}             
                         }
                     },
                     {   // sort by datetime
@@ -273,7 +273,7 @@ module.exports = class Queryer{
                             },
                             avgTemp: { $avg: "$temperature" },
                             avgHum: { $avg: "$humidity"},
-                            avgAvg: { $avg: "$pressure"}             
+                            avgPrs: { $avg: "$pressure"}             
                         }
                     },
                     {   // sort by datetime
@@ -322,7 +322,7 @@ module.exports = class Queryer{
                             },
                             avgTemp: { $avg: "$temperature" },
                             avgHum: { $avg: "$humidity"},
-                            avgAvg: { $avg: "$pressure"}             
+                            avgPrs: { $avg: "$pressure"}             
                         }
                     },
                     {   // sort by datetime
@@ -344,24 +344,20 @@ module.exports = class Queryer{
         let dtFrom = new Date();
         dtFrom.setTime(dtNow.getTime()- 1*60*60*1000);    // in milliseconds; minus 1 hour
 
-        collection.find({
-            "uploadDatetime":{
-                "$gte": timer.convert2IsoInLocaltimeZone(dtFrom, true), 
-                "$lte": timer.getCurrentLocaltimeInIso(true)
-            }
-        }).toArray((error, result) =>{
+        this._samplingPermin(dtFrom, dtNow).toArray((error, result) =>{
             if(error){
 
                 console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                             + ": " 
-                            + "Get /weather, param={1h}; fail." 
+                            + "Fail; Get /weather, param={1h}; " 
+                            + error.toString() 
                             );
                 return  response.status(500).send(error);
             }
-            response.send(result);
+            response.json({data: result});
             console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                         + ": " 
-                        + "Get /weather, param={1h}; success." 
+                        + "Success; Get /weather, param={1h}." 
                         );
         });
     }
@@ -381,14 +377,15 @@ module.exports = class Queryer{
 
                 console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                             + ": " 
-                            + "Get /weather, param={12h}; fail." 
+                            + "Fail ; Get /weather, param={12h}; "
+                            + error.toString() 
                             );
                 return  response.status(500).send(error);
             }
             response.send(result);
             console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                         + ": " 
-                        + "Get /weather, param={12h}; success." 
+                        + "Success; Get /weather, param={12h}." 
                         );
         });
     }
@@ -408,14 +405,15 @@ module.exports = class Queryer{
 
                 console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                             + ": " 
-                            + "Get /weather, param={1d}; fail." 
+                            + "Fail; Get /weather, param={1d}; "
+                            + error.toString() 
                             );
                 return  response.status(500).send(error);
             }
             response.send(result);
             console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                         + ": " 
-                        + "Get /weather, param={1d}; success." 
+                        + "Success; Get /weather, param={1d}." 
                         );
         });
     }
@@ -434,14 +432,15 @@ module.exports = class Queryer{
             if(error){
                 console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                             + ": " 
-                            + "Get /weather, param={7d}; fail." 
+                            + "Fail; Get /weather, param={7d}; "
+                            + error.toString() 
                             );
                 return  response.status(500).send(error);
             }
             response.send(result);
             console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                         + ": " 
-                        + "Get /weather, param={7d}; success." 
+                        + "Success; Get /weather, param={7d}." 
                         );
         });
     }
@@ -461,14 +460,15 @@ module.exports = class Queryer{
 
                     console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                                 + ": " 
-                                + "Get /weather, param={1m}; fail." 
+                                + "Fail; Get /weather, param={1m}; "
+                                + error.toString() 
                                 );
                     return  response.status(500).send(error);
                 }
                 response.send(result);
                 console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                             + ": " 
-                            + "Get /weather, param={1m}; success." 
+                            + "Success; Get /weather, param={1m}." 
                             );
         });
     }
@@ -488,14 +488,15 @@ module.exports = class Queryer{
 
                 console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                             + ": " 
-                            + "Get /weather, param={6m}; fail." 
+                            + "Fail; Get /weather, param={6m};"
+                            + error.toString() 
                             );
                 return  response.status(500).send(error);
             }
             response.send(result);
             console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                         + ": " 
-                        + "Get /weather, param={6m}; success." 
+                        + "Success; Get /weather, param={6m}." 
                         );
         });
     }
@@ -515,14 +516,15 @@ module.exports = class Queryer{
 
                 console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                             + ": " 
-                            + "Get /weather, param={1y}; fail." 
+                            + "Fail; Get /weather, param={1y}; "
+                            + error.toString() 
                             );
                 return  response.status(500).send(error);
             }
             response.send(result);
             console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                         + ": " 
-                        + "Get /weather, param={1y}; success." 
+                        + "Success; Get /weather, param={1y}." 
                         );
         });
     }
