@@ -333,6 +333,16 @@ module.exports = class Queryer{
                 ])
     } // end of _samplingPerDay
 
+    _getDbSize(callMeback){
+
+        // Retrieve the statistics for the collection
+        collection.stats((error, stats) =>{
+            if(error){
+                callMeback("size error");
+            }
+            callMeback(stats.size);
+        });
+    }
 
     /***************************************** */
     /*
@@ -340,26 +350,38 @@ module.exports = class Queryer{
     /* 
     *********************************************/
     get1hWeather(response, dtNow){
- 
-        let dtFrom = new Date();
-        dtFrom.setTime(dtNow.getTime()- 1*60*60*1000);    // in milliseconds; minus 1 hour
-
-        this._samplingPermin(dtFrom, dtNow).toArray((error, result) =>{
-            if(error){
-
+        
+        this._getDbSize( (sizeResult)=>{
+            
+            let dtFrom = new Date();
+            dtFrom.setTime(dtNow.getTime()- 1*60*60*1000);    // in milliseconds; minus 1 hour
+    
+            this._samplingPermin(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                if(error){
+    
+                    console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                                + ": " 
+                                + "Fail; Get /weather, param={1h}; " 
+                                + error.toString() 
+                                );
+                    response.json({ 
+                                status: "error",
+                                message: error.toString(),
+                                });
+                    return  response.status(500).send(error);
+                }
+                response.json({ 
+                                status: "success",
+                                message: "success",
+                                data: weatherResult,
+                                "size": sizeResult 
+                            });
                 console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                             + ": " 
-                            + "Fail; Get /weather, param={1h}; " 
-                            + error.toString() 
+                            + "Success; Get /weather, param={1h}." 
                             );
-                return  response.status(500).send(error);
-            }
-            response.json({data: result});
-            console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
-                        + ": " 
-                        + "Success; Get /weather, param={1h}." 
-                        );
-        });
+            });
+        }); // end of _getDbSize's callback
     }
 
     /***************************************** */
