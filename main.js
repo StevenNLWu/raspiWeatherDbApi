@@ -82,7 +82,7 @@ app.get("/weather", (request, response) =>{
             queryer.get1yWeather(response, dtNow);
             break;            
         default:
-            response.send("invalid paramter")
+            response.send("invalid paramter <br/>  paramter: dtRange = {1h, 12h, 1d, 7d, 1m, 6m, 1y}")
             console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                         + ": " 
                         + "Fail; Get /weather, param={" + paraRange + "}; invalid paramter." 

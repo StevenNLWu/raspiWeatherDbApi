@@ -38,8 +38,9 @@ module.exports = class Queryer{
                             year: { $year: "$2dateTime" },
                             month: { $month: "$2dateTime" },
                             day: { $dayOfMonth: "$2dateTime" },
-                            hr: {"$hour":"$2dateTime"},
-                            min: {"$minute":"$2dateTime"},           
+                            hr: {$hour: "$2dateTime"},
+                            min: {$minute: "$2dateTime"},     
+                            device: "$device",      
                             temperature: "$temperature",
                             humidity: "$humidity",
                             pressure: "$pressure"
@@ -51,8 +52,9 @@ module.exports = class Queryer{
                                 year: "$year",
                                 month: "$month",
                                 day: "$day",
-                                hr: "$hr",
-                                min: "$min"
+                                hour: "$hr",
+                                min: "$min",
+                                device:"$device",
                             },
                             avgTemp: { $avg: "$temperature" },
                             avgHum: { $avg: "$humidity"},
@@ -91,11 +93,12 @@ module.exports = class Queryer{
                             year: { $year: "$2dateTime" },
                             month: { $month: "$2dateTime" },
                             day: { $dayOfMonth: "$2dateTime" },
-                            hr: {"$hour":"$2dateTime"},
-                            min: {"$minute":"$2dateTime"},  
+                            hr: {$hour :"$2dateTime"},
+                            min: {$minute :"$2dateTime"},  
                             "min/2": {$floor:{
                                 $divide: [{"$minute":"$2dateTime"}, 2]
-                            }},                
+                            }},    
+                            device: "$device",            
                             temperature: "$temperature",
                             humidity: "$humidity",
                             pressure: "$pressure"
@@ -107,8 +110,9 @@ module.exports = class Queryer{
                                 year: "$year",
                                 month: "$month",
                                 day: "$day",
-                                hr: "$hr",
-                                "min/2": "$min/2"
+                                hour: "$hr",
+                                "min/2": "$min/2",
+                                device: "$device",
                             },
                             avgTemp: { $avg: "$temperature" },
                             avgHum: { $avg: "$humidity"},
@@ -147,11 +151,12 @@ module.exports = class Queryer{
                             year: { $year: "$2dateTime" },
                             month: { $month: "$2dateTime" },
                             day: { $dayOfMonth: "$2dateTime" },
-                            hr: {"$hour":"$2dateTime"},
-                            min: {"$minute":"$2dateTime"},  
+                            hr: {$hour :"$2dateTime"},
+                            min: {$minute :"$2dateTime"},  
                             "min/5": {$floor:{
                                 $divide: [{"$minute":"$2dateTime"}, 5]
-                            }},                
+                            }},            
+                            device: "$device",    
                             temperature: "$temperature",
                             humidity: "$humidity",
                             pressure: "$pressure"
@@ -163,8 +168,9 @@ module.exports = class Queryer{
                                 year: "$year",
                                 month: "$month",
                                 day: "$day",
-                                hr: "$hr",
-                                "min/5": "$min/5"
+                                hour: "$hr",
+                                "min/5": "$min/5",
+                                device: "$device",
                             },
                             avgTemp: { $avg: "$temperature" },
                             avgHum: { $avg: "$humidity"},
@@ -203,7 +209,8 @@ module.exports = class Queryer{
                             year: { $year: "$2dateTime" },
                             month: { $month: "$2dateTime" },
                             day: { $dayOfMonth: "$2dateTime" },
-                            hr:{"$hour":"$2dateTime"},
+                            hr:{$hour: "$2dateTime"},
+                            device: "$device",
                             temperature: "$temperature",
                             humidity: "$humidity",
                             pressure: "$pressure"
@@ -216,6 +223,8 @@ module.exports = class Queryer{
                                 month: "$month",
                                 day: "$day",
                                 hour: "$hr",
+                                min: "0",
+                                device: "$device",
                             },
                             avgTemp: { $avg: "$temperature" },
                             avgHum: { $avg: "$humidity"},
@@ -254,10 +263,11 @@ module.exports = class Queryer{
                             year: { $year: "$2dateTime" },
                             month: { $month: "$2dateTime" },
                             day: { $dayOfMonth: "$2dateTime" },
-                            hr:{"$hour":"$2dateTime"},
+                            hr:{$hour: "$2dateTime"},
                             "hr/2":{$floor:{
-                                        $divide: [{"$hour":"$2dateTime"}, 2]
-                                    }},
+                                        $divide: [{$hour:"$2dateTime"}, 2]
+                                    }}, 
+                            device: "$device",
                             temperature: "$temperature",
                             humidity: "$humidity",
                             pressure: "$pressure"
@@ -269,7 +279,9 @@ module.exports = class Queryer{
                                 year: "$year",
                                 month: "$month",
                                 day: "$day",
-                                "hr/2": "$hr/2",
+                                "hour/2": "$hr/2",
+                                min: "0",
+                                device: "$device",
                             },
                             avgTemp: { $avg: "$temperature" },
                             avgHum: { $avg: "$humidity"},
@@ -308,6 +320,7 @@ module.exports = class Queryer{
                             year: { $year: "$2dateTime" },
                             month: { $month: "$2dateTime" },
                             day: { $dayOfMonth: "$2dateTime" },
+                            device: "$device",
                             temperature: "$temperature",
                             humidity: "$humidity",
                             pressure: "$pressure"
@@ -319,6 +332,9 @@ module.exports = class Queryer{
                                 year: "$year",
                                 month: "$month",
                                 day: "$day",
+                                hour: "0",
+                                min: "0",
+                                device: "$device",      
                             },
                             avgTemp: { $avg: "$temperature" },
                             avgHum: { $avg: "$humidity"},
@@ -391,24 +407,36 @@ module.exports = class Queryer{
     *********************************************/
     get12hWeather(response, dtNow){
 
-        let dtFrom = new Date();
-        dtFrom.setTime(dtNow.getTime() - 12*60*60*1000);    // in milliseconds; minus 12 hour
+        this._getDbSize( (sizeResult)=>{
+            
+            let dtFrom = new Date();
+            dtFrom.setTime(dtNow.getTime() - 12*60*60*1000);    // in milliseconds; minus 12 hour
 
-        this._samplingPer2min(dtFrom, dtNow).toArray((error, result) =>{
-            if(error){
+            this._samplingPer2min(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                if(error){
 
+                    console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                                + ": " 
+                                + "Fail ; Get /weather, param={12h}; "
+                                + error.toString() 
+                                );
+                    response.json({ 
+                                    status: "error",
+                                    message: error.toString(),
+                                });
+                    return  response.status(500).send(error);
+                }
+                response.json({ 
+                                status: "success",
+                                message: "success",
+                                data: weatherResult,
+                                "size": sizeResult 
+                            });
                 console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                             + ": " 
-                            + "Fail ; Get /weather, param={12h}; "
-                            + error.toString() 
+                            + "Success; Get /weather, param={12h}." 
                             );
-                return  response.status(500).send(error);
-            }
-            response.send(result);
-            console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
-                        + ": " 
-                        + "Success; Get /weather, param={12h}." 
-                        );
+            });
         });
     }
 
@@ -419,24 +447,36 @@ module.exports = class Queryer{
     *********************************************/
     get1dWeather(response, dtNow){
 
-        let dtFrom = new Date();
-        dtFrom.setTime( dtNow.getTime() - 1 * 86400000 );    // minus 1 day
+        this._getDbSize( (sizeResult)=>{
+            
+            let dtFrom = new Date();
+            dtFrom.setTime( dtNow.getTime() - 1 * 86400000 );    // minus 1 day
 
-        this._samplingPer5min(dtFrom, dtNow).toArray((error, result) =>{
-            if(error){
+            this._samplingPer5min(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                if(error){
 
+                    console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                                + ": " 
+                                + "Fail; Get /weather, param={1d}; "
+                                + error.toString() 
+                                );
+                    response.json({ 
+                                    status: "error",
+                                    message: error.toString(),
+                                });
+                    return  response.status(500).send(error);
+                }
+                response.json({ 
+                                status: "success",
+                                message: "success",
+                                data: weatherResult,
+                                "size": sizeResult 
+                            });
                 console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                             + ": " 
-                            + "Fail; Get /weather, param={1d}; "
-                            + error.toString() 
+                            + "Success; Get /weather, param={1d}." 
                             );
-                return  response.status(500).send(error);
-            }
-            response.send(result);
-            console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
-                        + ": " 
-                        + "Success; Get /weather, param={1d}." 
-                        );
+            });
         });
     }
 
@@ -447,23 +487,35 @@ module.exports = class Queryer{
     *********************************************/
     get7dWeather(response, dtNow){
 
-        let dtFrom = new Date();
-        dtFrom.setTime( dtNow.getTime() - 7 * 86400000 );    // minus 7 day
+        this._getDbSize( (sizeResult)=>{
+            
+            let dtFrom = new Date();
+            dtFrom.setTime( dtNow.getTime() - 7 * 86400000 );    // minus 7 day
 
-        this._samplingPerHour(dtFrom, dtNow).toArray((error, result) =>{
-            if(error){
+            this._samplingPerHour(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                if(error){
+                    console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                                + ": " 
+                                + "Fail; Get /weather, param={7d}; "
+                                + error.toString() 
+                                );
+                    response.json({ 
+                                    status: "error",
+                                    message: error.toString(),
+                                });
+                    return  response.status(500).send(error);
+                }
+                response.json({ 
+                                status: "success",
+                                message: "success",
+                                data: weatherResult,
+                                "size": sizeResult 
+                            });
                 console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                             + ": " 
-                            + "Fail; Get /weather, param={7d}; "
-                            + error.toString() 
+                            + "Success; Get /weather, param={7d}." 
                             );
-                return  response.status(500).send(error);
-            }
-            response.send(result);
-            console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
-                        + ": " 
-                        + "Success; Get /weather, param={7d}." 
-                        );
+            });
         });
     }
 
@@ -474,24 +526,36 @@ module.exports = class Queryer{
     *********************************************/
     get1mWeather(response, dtNow){
 
-        let dtFrom = new Date();
-        dtFrom.setMonth(dtNow.getMonth() - 1);    // minus 1 month
+        this._getDbSize( (sizeResult)=>{
+            
+            let dtFrom = new Date();
+            dtFrom.setMonth(dtNow.getMonth() - 1);    // minus 1 month
 
-        this._samplingPer2hr(dtFrom, dtNow).toArray((error, result) =>{
-                if(error){
+            this._samplingPer2hr(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                    if(error){
 
+                        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                                    + ": " 
+                                    + "Fail; Get /weather, param={1m}; "
+                                    + error.toString() 
+                                    );
+                        response.json({ 
+                                        status: "error",
+                                        message: error.toString(),
+                                    });
+                        return  response.status(500).send(error);
+                    }
+                    response.json({ 
+                                    status: "success",
+                                    message: "success",
+                                    data: weatherResult,
+                                    "size": sizeResult 
+                                });
                     console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                                 + ": " 
-                                + "Fail; Get /weather, param={1m}; "
-                                + error.toString() 
+                                + "Success; Get /weather, param={1m}." 
                                 );
-                    return  response.status(500).send(error);
-                }
-                response.send(result);
-                console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
-                            + ": " 
-                            + "Success; Get /weather, param={1m}." 
-                            );
+            });
         });
     }
 
@@ -502,10 +566,12 @@ module.exports = class Queryer{
     *********************************************/
     get6mWeather(response, dtNow){
 
+        this._getDbSize( (sizeResult)=>{            
+
         let dtFrom = new Date();
         dtFrom.setMonth(dtNow.getMonth() - 6);    // minus 6 month
 
-        this._samplingPerDay(dtFrom, dtNow).toArray((error, result) =>{
+        this._samplingPerDay(dtFrom, dtNow).toArray((error, weatherResult) =>{
             if(error){
 
                 console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
@@ -513,13 +579,23 @@ module.exports = class Queryer{
                             + "Fail; Get /weather, param={6m};"
                             + error.toString() 
                             );
+                response.json({ 
+                                status: "error",
+                                message: error.toString(),
+                            });
                 return  response.status(500).send(error);
             }
-            response.send(result);
+            response.json({ 
+                            status: "success",
+                            message: "success",
+                            data: weatherResult,
+                            "size": sizeResult 
+                        });
             console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                         + ": " 
                         + "Success; Get /weather, param={6m}." 
                         );
+            });
         });
     }
 
@@ -530,24 +606,36 @@ module.exports = class Queryer{
     *********************************************/
     get1yWeather(response, dtNow){
 
-        let dtFrom = new Date();
-        dtFrom.setFullYear(dtNow.getFullYear() - 1);    // minus 1 year
+        this._getDbSize( (sizeResult)=>{
+                
+            let dtFrom = new Date();
+            dtFrom.setFullYear(dtNow.getFullYear() - 1);    // minus 1 year
 
-        this._samplingPerDay(dtFrom, dtNow).toArray((error, result) =>{
-            if(error){
+            this._samplingPerDay(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                if(error){
 
+                    console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                                + ": " 
+                                + "Fail; Get /weather, param={1y}; "
+                                + error.toString() 
+                                );
+                    response.json({ 
+                                    status: "error",
+                                    message: error.toString(),
+                                });
+                    return  response.status(500).send(error);
+                }
+                response.json({ 
+                                status: "success",
+                                message: "success",
+                                data: weatherResult,
+                                "size": sizeResult 
+                            });
                 console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                             + ": " 
-                            + "Fail; Get /weather, param={1y}; "
-                            + error.toString() 
+                            + "Success; Get /weather, param={1y}." 
                             );
-                return  response.status(500).send(error);
-            }
-            response.send(result);
-            console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
-                        + ": " 
-                        + "Success; Get /weather, param={1y}." 
-                        );
+            });
         });
     }
 
