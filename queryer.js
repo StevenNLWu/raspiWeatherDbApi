@@ -349,12 +349,40 @@ module.exports = class Queryer{
                 ])
     } // end of _samplingPerDay
 
+    _latestRecord(){
+        return  collection.aggregate([{
+            $addFields: { // string to datetime
+                        "2dateTime":{
+                            "$dateFromString": { 
+                                "dateString": "$uploadDatetime"
+                            } 
+                        }
+                    }
+            },
+            {   // sorting
+                $sort: {"device": 1,
+                        "2dateTime": 1
+                }
+            },
+            {   // group by device and get the last updated record
+                $group: {
+                        _id: "$device",
+                        lastUpdated: {$last: "$2dateTime"},
+                        temp: {$last: "$temperature"},
+                        hum: {$last: "$humidity"},
+                        prs: {$last: "$pressure"},            
+                }
+            }
+        ])
+} // end of _latestRecord
+
     _getDbSize(callMeback){
 
         // Retrieve the statistics for the collection
         collection.stats((error, stats) =>{
             if(error){
                 callMeback("size error");
+                return;
             }
             callMeback(stats.size);
         });
@@ -365,39 +393,49 @@ module.exports = class Queryer{
     /*   function to get 1-hour weather data
     /* 
     *********************************************/
-    get1hWeather(response, dtNow){
+    get1hWeather(ip, response, dtNow){
+   
+        this._latestRecord().toArray((error, lastRecord) =>{
+            if(error){
+                lastRecord = "null";
+            }
+
+            this._getDbSize( (sizeResult)=>{
+                
+                let dtFrom = new Date();
+                dtFrom.setTime(dtNow.getTime()- 1*60*60*1000);    // in milliseconds; minus 1 hour
         
-        this._getDbSize( (sizeResult)=>{
-            
-            let dtFrom = new Date();
-            dtFrom.setTime(dtNow.getTime()- 1*60*60*1000);    // in milliseconds; minus 1 hour
-    
-            this._samplingPermin(dtFrom, dtNow).toArray((error, weatherResult) =>{
-                if(error){
-    
+                this._samplingPermin(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                    if(error){
+        
+                        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                                    + ": " 
+                                    + ip 
+                                    + "; "
+                                    + "Fail; Get /weather, param={1h}; " 
+                                    + error.toString() 
+                                    );
+                        return response.status(500).json({ 
+                                    status: "error",
+                                    message: error.toString(),
+                                    });
+                    }
+                    response.json({ 
+                                    status: "success",
+                                    message: "success",
+                                    data: weatherResult,
+                                    lastRecord: lastRecord,
+                                    "size": sizeResult 
+                                });
                     console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                                 + ": " 
-                                + "Fail; Get /weather, param={1h}; " 
-                                + error.toString() 
+                                + ip 
+                                + "; "
+                                + "Success; Get /weather, param={1h}." 
                                 );
-                    response.json({ 
-                                status: "error",
-                                message: error.toString(),
-                                });
-                    return  response.status(500).send(error);
-                }
-                response.json({ 
-                                status: "success",
-                                message: "success",
-                                data: weatherResult,
-                                "size": sizeResult 
-                            });
-                console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
-                            + ": " 
-                            + "Success; Get /weather, param={1h}." 
-                            );
-            });
-        }); // end of _getDbSize's callback
+                });
+            }); // end of _getDbSize's callback
+        }); // end of _latestRecord's callback
     }
 
     /***************************************** */
@@ -405,37 +443,47 @@ module.exports = class Queryer{
     /*   function to get 12-hour weather data
     /* 
     *********************************************/
-    get12hWeather(response, dtNow){
+    get12hWeather(ip, response, dtNow){
 
-        this._getDbSize( (sizeResult)=>{
-            
-            let dtFrom = new Date();
-            dtFrom.setTime(dtNow.getTime() - 12*60*60*1000);    // in milliseconds; minus 12 hour
+        this._latestRecord().toArray((error, lastRecord) =>{
+            if(error){
+                lastRecord = "null";
+            }
 
-            this._samplingPer2min(dtFrom, dtNow).toArray((error, weatherResult) =>{
-                if(error){
+            this._getDbSize( (sizeResult)=>{
+                
+                let dtFrom = new Date();
+                dtFrom.setTime(dtNow.getTime() - 12*60*60*1000);    // in milliseconds; minus 12 hour
 
+                this._samplingPer2min(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                    if(error){
+
+                        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                                    + ": " 
+                                    + ip 
+                                    + "; "
+                                    + "Fail ; Get /weather, param={12h}; "
+                                    + error.toString() 
+                                    );
+                        return response.status(500).json({ 
+                                        status: "error",
+                                        message: error.toString(),
+                                    });
+                    }
+                    response.json({ 
+                                    status: "success",
+                                    message: "success",
+                                    data: weatherResult,
+                                    lastRecord: lastRecord,
+                                    "size": sizeResult 
+                                });
                     console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                                 + ": " 
-                                + "Fail ; Get /weather, param={12h}; "
-                                + error.toString() 
+                                + ip 
+                                + "; "
+                                + "Success; Get /weather, param={12h}." 
                                 );
-                    response.json({ 
-                                    status: "error",
-                                    message: error.toString(),
-                                });
-                    return  response.status(500).send(error);
-                }
-                response.json({ 
-                                status: "success",
-                                message: "success",
-                                data: weatherResult,
-                                "size": sizeResult 
-                            });
-                console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
-                            + ": " 
-                            + "Success; Get /weather, param={12h}." 
-                            );
+                });
             });
         });
     }
@@ -445,37 +493,47 @@ module.exports = class Queryer{
     /*   function to get 1-day weather data
     /* 
     *********************************************/
-    get1dWeather(response, dtNow){
+    get1dWeather(ip, response, dtNow){
 
-        this._getDbSize( (sizeResult)=>{
-            
-            let dtFrom = new Date();
-            dtFrom.setTime( dtNow.getTime() - 1 * 86400000 );    // minus 1 day
+        this._latestRecord().toArray((error, lastRecord) =>{
+            if(error){
+                lastRecord = "null";
+            }
 
-            this._samplingPer5min(dtFrom, dtNow).toArray((error, weatherResult) =>{
-                if(error){
+            this._getDbSize( (sizeResult)=>{
+                
+                let dtFrom = new Date();
+                dtFrom.setTime( dtNow.getTime() - 1 * 86400000 );    // minus 1 day
 
+                this._samplingPer5min(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                    if(error){
+
+                        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                                    + ": " 
+                                    + ip 
+                                    + "; "
+                                    + "Fail; Get /weather, param={1d}; "
+                                    + error.toString() 
+                                    );
+                        return response.status(500).json({ 
+                                        status: "error",
+                                        message: error.toString(),
+                                    });
+                    }
+                    response.json({ 
+                                    status: "success",
+                                    message: "success",
+                                    data: weatherResult,
+                                    lastRecord: lastRecord,
+                                    "size": sizeResult 
+                                });
                     console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                                 + ": " 
-                                + "Fail; Get /weather, param={1d}; "
-                                + error.toString() 
+                                + ip 
+                                + "; "
+                                + "Success; Get /weather, param={1d}." 
                                 );
-                    response.json({ 
-                                    status: "error",
-                                    message: error.toString(),
-                                });
-                    return  response.status(500).send(error);
-                }
-                response.json({ 
-                                status: "success",
-                                message: "success",
-                                data: weatherResult,
-                                "size": sizeResult 
-                            });
-                console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
-                            + ": " 
-                            + "Success; Get /weather, param={1d}." 
-                            );
+                });
             });
         });
     }
@@ -485,36 +543,47 @@ module.exports = class Queryer{
     /*   function to get 7-day weather data
     /* 
     *********************************************/
-    get7dWeather(response, dtNow){
+    get7dWeather(ip, response, dtNow){
 
-        this._getDbSize( (sizeResult)=>{
-            
-            let dtFrom = new Date();
-            dtFrom.setTime( dtNow.getTime() - 7 * 86400000 );    // minus 7 day
 
-            this._samplingPerHour(dtFrom, dtNow).toArray((error, weatherResult) =>{
-                if(error){
+        this._latestRecord().toArray((error, lastRecord) =>{
+            if(error){
+                lastRecord = "null";
+            }
+
+            this._getDbSize( (sizeResult)=>{
+                
+                let dtFrom = new Date();
+                dtFrom.setTime( dtNow.getTime() - 7 * 86400000 );    // minus 7 day
+
+                this._samplingPerHour(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                    if(error){
+                        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                                    + ": " 
+                                    + ip 
+                                    + "; "
+                                    + "Fail; Get /weather, param={7d}; "
+                                    + error.toString() 
+                                    );
+                        return response.status(500).json({ 
+                                        status: "error",
+                                        message: error.toString(),
+                                    });
+                    }
+                    response.json({ 
+                                    status: "success",
+                                    message: "success",
+                                    data: weatherResult,
+                                    lastRecord: lastRecord,
+                                    "size": sizeResult 
+                                });
                     console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                                 + ": " 
-                                + "Fail; Get /weather, param={7d}; "
-                                + error.toString() 
+                                + ip 
+                                + "; "
+                                + "Success; Get /weather, param={7d}." 
                                 );
-                    response.json({ 
-                                    status: "error",
-                                    message: error.toString(),
-                                });
-                    return  response.status(500).send(error);
-                }
-                response.json({ 
-                                status: "success",
-                                message: "success",
-                                data: weatherResult,
-                                "size": sizeResult 
-                            });
-                console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
-                            + ": " 
-                            + "Success; Get /weather, param={7d}." 
-                            );
+                });
             });
         });
     }
@@ -524,37 +593,47 @@ module.exports = class Queryer{
     /*   function to get 1-month weather data
     /* 
     *********************************************/
-    get1mWeather(response, dtNow){
+    get1mWeather(ip, response, dtNow){
 
-        this._getDbSize( (sizeResult)=>{
-            
-            let dtFrom = new Date();
-            dtFrom.setMonth(dtNow.getMonth() - 1);    // minus 1 month
+        this._latestRecord().toArray((error, lastRecord) =>{
+            if(error){
+                lastRecord = "null";
+            }
 
-            this._samplingPer2hr(dtFrom, dtNow).toArray((error, weatherResult) =>{
-                    if(error){
+            this._getDbSize( (sizeResult)=>{
+                
+                let dtFrom = new Date();
+                dtFrom.setMonth(dtNow.getMonth() - 1);    // minus 1 month
 
+                this._samplingPer2hr(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                        if(error){
+
+                            console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                                        + ": " 
+                                        + ip 
+                                        + "; "
+                                        + "Fail; Get /weather, param={1m}; "
+                                        + error.toString() 
+                                        );
+                            return response.jstatus(500).json({ 
+                                            status: "error",
+                                            message: error.toString(),
+                                        });
+                        }
+                        response.json({ 
+                                        status: "success",
+                                        message: "success",
+                                        data: weatherResult,
+                                        lastRecord: lastRecord,
+                                        "size": sizeResult 
+                                    });
                         console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                                     + ": " 
-                                    + "Fail; Get /weather, param={1m}; "
-                                    + error.toString() 
+                                    + ip 
+                                    + "; "
+                                    + "Success; Get /weather, param={1m}." 
                                     );
-                        response.json({ 
-                                        status: "error",
-                                        message: error.toString(),
-                                    });
-                        return  response.status(500).send(error);
-                    }
-                    response.json({ 
-                                    status: "success",
-                                    message: "success",
-                                    data: weatherResult,
-                                    "size": sizeResult 
-                                });
-                    console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
-                                + ": " 
-                                + "Success; Get /weather, param={1m}." 
-                                );
+                });
             });
         });
     }
@@ -564,37 +643,47 @@ module.exports = class Queryer{
     /*   function to get 6-month weather data
     /* 
     *********************************************/
-    get6mWeather(response, dtNow){
+    get6mWeather(ip, response, dtNow){
+
+        this._latestRecord().toArray((error, lastRecord) =>{
+            if(error){
+                lastRecord = "null";
+            }
 
         this._getDbSize( (sizeResult)=>{            
 
-        let dtFrom = new Date();
-        dtFrom.setMonth(dtNow.getMonth() - 6);    // minus 6 month
+            let dtFrom = new Date();
+            dtFrom.setMonth(dtNow.getMonth() - 6);    // minus 6 month
 
-        this._samplingPerDay(dtFrom, dtNow).toArray((error, weatherResult) =>{
-            if(error){
+            this._samplingPerDay(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                if(error){
 
+                    console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                                + ": " 
+                                + ip 
+                                + "; "
+                                + "Fail; Get /weather, param={6m};"
+                                + error.toString() 
+                                );
+                    return response.status(500).json({ 
+                                    status: "error",
+                                    message: error.toString(),
+                                });
+                }
+                response.json({ 
+                                status: "success",
+                                message: "success",
+                                data: weatherResult,
+                                lastRecord: lastRecord,
+                                "size": sizeResult 
+                            });
                 console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                             + ": " 
-                            + "Fail; Get /weather, param={6m};"
-                            + error.toString() 
+                            + ip 
+                            + "; "
+                            + "Success; Get /weather, param={6m}." 
                             );
-                response.json({ 
-                                status: "error",
-                                message: error.toString(),
-                            });
-                return  response.status(500).send(error);
-            }
-            response.json({ 
-                            status: "success",
-                            message: "success",
-                            data: weatherResult,
-                            "size": sizeResult 
-                        });
-            console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
-                        + ": " 
-                        + "Success; Get /weather, param={6m}." 
-                        );
+                });
             });
         });
     }
@@ -604,40 +693,49 @@ module.exports = class Queryer{
     /*   function to get 1-year weather data
     /* 
     *********************************************/
-    get1yWeather(response, dtNow){
+    get1yWeather(ip, response, dtNow){
 
-        this._getDbSize( (sizeResult)=>{
-                
-            let dtFrom = new Date();
-            dtFrom.setFullYear(dtNow.getFullYear() - 1);    // minus 1 year
+        this._latestRecord().toArray((error, lastRecord) =>{
+            if(error){
+                lastRecord = "null";
+            }
 
-            this._samplingPerDay(dtFrom, dtNow).toArray((error, weatherResult) =>{
-                if(error){
+            this._getDbSize( (sizeResult)=>{
+                    
+                let dtFrom = new Date();
+                dtFrom.setFullYear(dtNow.getFullYear() - 1);    // minus 1 year
 
+                this._samplingPerDay(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                    if(error){
+
+                        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                                    + ": " 
+                                    + ip 
+                                    + "; "
+                                    + "Fail; Get /weather, param={1y}; "
+                                    + error.toString() 
+                                    );
+                        return response.status(500).json({ 
+                                        status: "error",
+                                        message: error.toString(),
+                                    });
+                    }
+                    response.json({ 
+                                    status: "success",
+                                    message: "success",
+                                    data: weatherResult,
+                                    lastRecord: lastRecord,
+                                    "size": sizeResult 
+                                });
                     console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                                 + ": " 
-                                + "Fail; Get /weather, param={1y}; "
-                                + error.toString() 
+                                + ip 
+                                + "; "
+                                + "Success; Get /weather, param={1y}." 
                                 );
-                    response.json({ 
-                                    status: "error",
-                                    message: error.toString(),
-                                });
-                    return  response.status(500).send(error);
-                }
-                response.json({ 
-                                status: "success",
-                                message: "success",
-                                data: weatherResult,
-                                "size": sizeResult 
-                            });
-                console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
-                            + ": " 
-                            + "Success; Get /weather, param={1y}." 
-                            );
+                });
             });
         });
     }
 
 }; // end of class
-

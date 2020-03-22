@@ -6,13 +6,27 @@ const timer = new Timer();
 const Queryer = require("./queryer");
 const queryer = new Queryer();
 
+// package for log
+const fs = require('fs');
+const util = require('util');
+var log_file = fs.createWriteStream(__dirname + "/log" + "/log.log", {flags : "a"}); // 'a' means appending (old data will be preserved)
+var log_stdout = process.stdout;
+
 var app = Express();
 var dbConfig = require('./dbConfig');
 app.use(BodyParser.json());
 app.use(BodyParser.urlencoded({ extended: true }));
 
+const PORT = 5000;
+const grant = "*";
 
-app.listen(5000, () => {
+// function to overwrite the console.log, so as to log the console-context to a text file
+console.log = function(d) { //
+  log_file.write(util.format(d) + '\n');
+  log_stdout.write(util.format(d) + '\n');
+};
+
+app.listen(PORT, () => {
     MongoClient.connect(dbConfig.CONNECTION_URL, {useUnifiedTopology: true},
                                                 {useNewUrlParser: true },
                                                 (error, client) => {
@@ -20,7 +34,9 @@ app.listen(5000, () => {
 
             console.log( timer.getCurrentLocaltimeInIso(true)
                         + ": " 
-                        +"Fail to Connect DB `" + dbConfig.CONNECTION_URL + "`.");
+                        + "Fail to Connect DB `" 
+                        + dbConfig.DATABASE_NAME + "." + dbConfig.COLLECTION 
+                        + "`.");
 
             throw error;
         }
@@ -28,7 +44,9 @@ app.listen(5000, () => {
         collection = database.collection(dbConfig.COLLECTION);
         console.log( timer.getCurrentLocaltimeInIso(true)
                     + ": " 
-                    +"Connected to DB `" + dbConfig.CONNECTION_URL + "`.");
+                    +"Connected to DB `" 
+                    + dbConfig.DATABASE_NAME + "." + dbConfig.COLLECTION 
+                    + "`.");
     });
 });
 
@@ -36,7 +54,7 @@ app.listen(5000, () => {
 app.use(function (req, res, next) {
 
     // Website you wish to allow to connect
-    res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
+    res.setHeader('Access-Control-Allow-Origin', grant);
     // Request methods you wish to allow
     res.setHeader('Access-Control-Allow-Methods', 'GET') //other option: POST, OPTIONS, PUT, PATCH, DELETE');
     // Request headers you wish to allow
@@ -45,48 +63,65 @@ app.use(function (req, res, next) {
     // to the API (e.g. in case you use sessions)
     res.setHeader('Access-Control-Allow-Credentials', true);
     // Pass to next layer of middleware
+    
     next();
 });
 
 
 app.get("/weather", (request, response) =>{
 
-    let paraRange = request.query.dtRange;
-    let dtNow = new Date;
+    try{
+        let paraRange = request.query.dtRange;
+        let dtNow = new Date;
 
-    console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
-                    + ": " 
-                    + "visiting /weather, param={" + paraRange + "}" 
-                );
-
-    switch(paraRange){
-        case '1h':
-            queryer.get1hWeather(response, dtNow);
-            break;
-        case '12h':
-            queryer.get12hWeather(response, dtNow);
-            break;   
-        case '1d':
-            queryer.get1dWeather(response, dtNow);
-            break;   
-        case '7d':
-            queryer.get7dWeather(response, dtNow);
-            break;       
-        case '1m':
-            queryer.get1mWeather(response, dtNow);
-            break;  
-        case '6m':
-            queryer.get6mWeather(response, dtNow);
-            break;                            
-        case '1y':
-            queryer.get1yWeather(response, dtNow);
-            break;            
-        default:
-            response.send("invalid paramter <br/>  paramter: dtRange = {1h, 12h, 1d, 7d, 1m, 6m, 1y}")
-            console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
                         + ": " 
-                        + "Fail; Get /weather, param={" + paraRange + "}; invalid paramter." 
-                    );   
-    }
+                        + request.ip 
+                        + "; "
+                        + "visiting /weather, param={" + paraRange + "}" 
+                    );
 
+        switch(paraRange){
+            case '1h':
+                queryer.get1hWeather(request.ip, response, dtNow);
+                break;
+            case '12h':
+                queryer.get12hWeather(request.ip, response, dtNow);
+                break;   
+            case '1d':
+                queryer.get1dWeather(request.ip, response, dtNow);
+                break;   
+            case '7d':
+                queryer.get7dWeather(request.ip, response, dtNow);
+                break;       
+            case '1m':
+                queryer.get1mWeather(request.ip, response, dtNow);
+                break;  
+            case '6m':
+                queryer.get6mWeather(request.ip, response, dtNow);
+                break;                            
+            case '1y':
+                queryer.get1yWeather(request.ip, response, dtNow);
+                break;            
+            default:
+                console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                            + ": " 
+                            + request.ip 
+                            + "; "
+                            + "Fail; Get /weather, param={" + paraRange + "}; invalid paramter." 
+                        );   
+                return response.status(400).json({ 
+                    status: "error",
+                    message: "invalid paramter <br/>  paramter: dtRange = {1h, 12h, 1d, 7d, 1m, 6m, 1y}"
+                });
+
+        }
+    }
+    catch(error){
+        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+        + ": " 
+        + request.ip 
+        + "; "
+        + "Error; " + error.toString());
+    }
 });
