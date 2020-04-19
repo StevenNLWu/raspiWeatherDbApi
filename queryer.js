@@ -373,7 +373,9 @@ module.exports = class Queryer{
                         prs: {$last: "$pressure"},            
                 }
             }
-        ])
+        ], 
+            {allowDiskUse: true}
+        );
 } // end of _latestRecord
 
     _getDbSize(callMeback){
