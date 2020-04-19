@@ -1,10 +1,22 @@
-const Express = require("express");
+// import
 const BodyParser = require("body-parser");
+const dbConfig = require('./dbConfig');
+const domainConfig = require('./domainConfig');
+const Express = require("express");
 const MongoClient = require("mongodb").MongoClient;
 const Timer = require("./timer");
-const timer = new Timer();
 const Queryer = require("./queryer");
+
+// constant variable
+const timer = new Timer();
 const queryer = new Queryer();
+const PORT = 5000;
+const grant = "*";
+
+// app
+var app = Express();
+app.use(BodyParser.json());
+app.use(BodyParser.urlencoded({ extended: true }));
 
 // package for log
 const fs = require('fs');
@@ -12,30 +24,38 @@ const util = require('util');
 var log_file = fs.createWriteStream(__dirname + "/log" + "/log.log", {flags : "a"}); // 'a' means appending (old data will be preserved)
 var log_stdout = process.stdout;
 
-var app = Express();
-var dbConfig = require('./dbConfig');
-app.use(BodyParser.json());
-app.use(BodyParser.urlencoded({ extended: true }));
-
-const PORT = 5000;
-const grant = "*";
-
 // function to overwrite the console.log, so as to log the console-context to a text file
 console.log = function(d) { //
   log_file.write(util.format(d) + '\n');
   log_stdout.write(util.format(d) + '\n');
 };
 
-app.listen(PORT, () => {
+// SSL cert
+const http = require("http");
+const https = require("https");
+const domainName = domainConfig.DOMAIN;
+const cert = fs.readFileSync(__dirname + domainConfig.CERT);
+const ca = fs.readFileSync(__dirname + domainConfig.CA);
+const key = fs.readFileSync(__dirname + domainConfig.KEY);
+const httpsOptions = {
+   cert: cert,
+   ca: ca,
+   key: key
+};
+const httpsServer = https.createServer(httpsOptions, app);
+
+// kick the server with https
+httpsServer.listen(PORT, domainName, () =>{
+
     MongoClient.connect(dbConfig.CONNECTION_URL, {useUnifiedTopology: true},
                                                 {useNewUrlParser: true },
                                                 (error, client) => {
         if(error) {
 
             console.log( timer.getCurrentLocaltimeInIso(true)
-                        + ": " 
-                        + "Fail to Connect DB `" 
-                        + dbConfig.DATABASE_NAME + "." + dbConfig.COLLECTION 
+                        + ": "
+                        + "Fail to Connect DB `"
+                        + dbConfig.DATABASE_NAME + "." + dbConfig.COLLECTION
                         + "`.");
 
             throw error;
@@ -43,9 +63,9 @@ app.listen(PORT, () => {
         database = client.db(dbConfig.DATABASE_NAME);
         collection = database.collection(dbConfig.COLLECTION);
         console.log( timer.getCurrentLocaltimeInIso(true)
-                    + ": " 
-                    +"Connected to DB `" 
-                    + dbConfig.DATABASE_NAME + "." + dbConfig.COLLECTION 
+                    + ": "
+                    +"Connected to DB `"
+                    + dbConfig.DATABASE_NAME + "." + dbConfig.COLLECTION
                     + "`.");
     });
 });
@@ -118,6 +138,7 @@ app.get("/weather", (request, response) =>{
         }
     }
     catch(error){
+        let dtNow = new Date;
         console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
         + ": " 
         + request.ip 
@@ -125,3 +146,4 @@ app.get("/weather", (request, response) =>{
         + "Error; " + error.toString());
     }
 });
+
