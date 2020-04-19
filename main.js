@@ -94,7 +94,7 @@ app.get("/weather", (request, response) =>{
         let paraRange = request.query.dtRange;
         let dtNow = new Date;
 
-        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+        console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                         + ": " 
                         + request.ip 
                         + "; "
@@ -124,7 +124,7 @@ app.get("/weather", (request, response) =>{
                 queryer.get1yWeather(request.ip, response, dtNow);
                 break;            
             default:
-                console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                             + ": " 
                             + request.ip 
                             + "; "
@@ -139,7 +139,7 @@ app.get("/weather", (request, response) =>{
     }
     catch(error){
         let dtNow = new Date;
-        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+        console.log( timer.convert2IsoInLocaltimeZone(dtNow)
         + ": " 
         + request.ip 
         + "; "

@@ -17,9 +17,9 @@ module.exports = class Queryer{
     _samplingPermin(dtFrom, dtTo){
         return  collection.aggregate([{
                     $match: {   // filter by date range
-                            "uploadDatetime":{
-                                "$gte": timer.convert2IsoInLocaltimeZone(dtFrom, true), 
-                                "$lte": timer.convert2IsoInLocaltimeZone(dtTo, true), 
+                            "uploadDtInUtc":{
+                                "$gte": timer.convert2Iso(dtFrom, false, true),
+                                "$lte": timer.convert2Iso(dtTo, false, true) 
                             }
                         }
                     },
@@ -27,7 +27,7 @@ module.exports = class Queryer{
                         $addFields: {
                             "2dateTime":{
                                 "$dateFromString": { 
-                                    "dateString": "$uploadDatetime"
+                                    "dateString": "$uploadDtInUtc"
                                 }
                             }
                         }
@@ -72,9 +72,9 @@ module.exports = class Queryer{
     _samplingPer2min(dtFrom, dtTo){
         return  collection.aggregate([{
                     $match: {   // filter by date range
-                            "uploadDatetime":{
-                                "$gte": timer.convert2IsoInLocaltimeZone(dtFrom, true), 
-                                "$lte": timer.convert2IsoInLocaltimeZone(dtTo, true), 
+                            "uploadDtInUtc":{
+                                "$gte": timer.convert2Iso(dtFrom, false, true),
+                                "$lte": timer.convert2Iso(dtTo, false, true) 
                             }
                         }
                     },
@@ -82,7 +82,7 @@ module.exports = class Queryer{
                         $addFields: {
                             "2dateTime":{
                                 "$dateFromString": { 
-                                    "dateString": "$uploadDatetime"
+                                    "dateString": "$uploadDtInUtc"
                                 }
                             }
                         }
@@ -130,9 +130,9 @@ module.exports = class Queryer{
     _samplingPer5min(dtFrom, dtTo){
         return  collection.aggregate([{
                     $match: {   // filter by date range
-                            "uploadDatetime":{
-                                "$gte": timer.convert2IsoInLocaltimeZone(dtFrom, true), 
-                                "$lte": timer.convert2IsoInLocaltimeZone(dtTo, true), 
+                            "uploadDtInUtc":{
+                                "$gte": timer.convert2Iso(dtFrom, false, true),
+                                "$lte": timer.convert2Iso(dtTo, false, true) 
                             }
                         }
                     },
@@ -140,7 +140,7 @@ module.exports = class Queryer{
                         $addFields: {
                             "2dateTime":{
                                 "$dateFromString": { 
-                                    "dateString": "$uploadDatetime"
+                                    "dateString": "$uploadDtInUtc"
                                 }
                             }
                         }
@@ -188,9 +188,9 @@ module.exports = class Queryer{
     _samplingPerHour(dtFrom, dtTo){
         return  collection.aggregate([{
                     $match: {   // filter by date range
-                            "uploadDatetime":{
-                                "$gte": timer.convert2IsoInLocaltimeZone(dtFrom, true), 
-                                "$lte": timer.convert2IsoInLocaltimeZone(dtTo, true), 
+                            "uploadDtInUtc":{
+                                "$gte": timer.convert2Iso(dtFrom, false, true),
+                                "$lte": timer.convert2Iso(dtTo, false, true) 
                             }
                         }
                     },
@@ -198,7 +198,7 @@ module.exports = class Queryer{
                         $addFields: {
                             "2dateTime":{
                                 "$dateFromString": { 
-                                    "dateString": "$uploadDatetime"
+                                    "dateString": "$uploadDtInUtc"
                                 }
                             }
                         }
@@ -242,9 +242,9 @@ module.exports = class Queryer{
     _samplingPer2hr(dtFrom, dtTo){
         return  collection.aggregate([{
                     $match: {   // filter by date range
-                            "uploadDatetime":{
-                                "$gte": timer.convert2IsoInLocaltimeZone(dtFrom, true), 
-                                "$lte": timer.convert2IsoInLocaltimeZone(dtTo, true), 
+                            "uploadDtInUtc":{
+                                "$gte": timer.convert2Iso(dtFrom, false, true),
+                                "$lte": timer.convert2Iso(dtTo, false, true) 
                             }
                         }
                     },
@@ -252,7 +252,7 @@ module.exports = class Queryer{
                         $addFields: {
                             "2dateTime":{
                                 "$dateFromString": { 
-                                    "dateString": "$uploadDatetime"
+                                    "dateString": "$uploadDtInUtc"
                                 }
                             }
                         }
@@ -299,9 +299,9 @@ module.exports = class Queryer{
     _samplingPerDay(dtFrom, dtTo){
         return  collection.aggregate([{
                     $match: {   // filter by date range
-                            "uploadDatetime":{
-                                "$gte": timer.convert2IsoInLocaltimeZone(dtFrom, true), 
-                                "$lte": timer.convert2IsoInLocaltimeZone(dtTo, true), 
+                            "uploadDtInUtc":{
+                                "$gte": timer.convert2Iso(dtFrom, false, true),
+                                "$lte": timer.convert2Iso(dtTo, false, true) 
                             }
                         }
                     },
@@ -309,7 +309,7 @@ module.exports = class Queryer{
                         $addFields: {
                             "2dateTime":{
                                 "$dateFromString": { 
-                                    "dateString": "$uploadDatetime"
+                                    "dateString": "$uploadDtInUtc"
                                 }
                             }
                         }
@@ -354,7 +354,7 @@ module.exports = class Queryer{
             $addFields: { // string to datetime
                         "2dateTime":{
                             "$dateFromString": { 
-                                "dateString": "$uploadDatetime"
+                                "dateString": "$uploadDtInUtc"
                             } 
                         }
                     }
@@ -372,7 +372,7 @@ module.exports = class Queryer{
                         hum: {$last: "$humidity"},
                         prs: {$last: "$pressure"},            
                 }
-            }
+            },
         ], 
             {allowDiskUse: true}
         );
@@ -404,13 +404,14 @@ module.exports = class Queryer{
 
             this._getDbSize( (sizeResult)=>{
                 
-                let dtFrom = new Date();
-                dtFrom.setTime(dtNow.getTime()- 1*60*60*1000);    // in milliseconds; minus 1 hour
+                let dtNowUtc = new Date();
+                let dtFromUtc = new Date();           
+                dtFromUtc.setTime(dtNowUtc.getTime()- 1*60*60*1000);    // in milliseconds; minus 1 hour
         
-                this._samplingPermin(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                this._samplingPermin(dtFromUtc, dtNowUtc).toArray((error, weatherResult) =>{
                     if(error){
         
-                        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                        console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                                     + ": " 
                                     + ip 
                                     + "; "
@@ -429,7 +430,7 @@ module.exports = class Queryer{
                                     lastRecord: lastRecord,
                                     "size": sizeResult 
                                 });
-                    console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                    console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                                 + ": " 
                                 + ip 
                                 + "; "
@@ -454,13 +455,14 @@ module.exports = class Queryer{
 
             this._getDbSize( (sizeResult)=>{
                 
-                let dtFrom = new Date();
-                dtFrom.setTime(dtNow.getTime() - 12*60*60*1000);    // in milliseconds; minus 12 hour
+                let dtNowUtc = new Date();
+                let dtFromUtc = new Date();      
+                dtFromUtc.setTime(dtNowUtc.getTime() - 12*60*60*1000);    // in milliseconds; minus 12 hour
 
-                this._samplingPer2min(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                this._samplingPer2min(dtFromUtc, dtNowUtc).toArray((error, weatherResult) =>{
                     if(error){
 
-                        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                        console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                                     + ": " 
                                     + ip 
                                     + "; "
@@ -479,7 +481,7 @@ module.exports = class Queryer{
                                     lastRecord: lastRecord,
                                     "size": sizeResult 
                                 });
-                    console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                    console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                                 + ": " 
                                 + ip 
                                 + "; "
@@ -503,14 +505,15 @@ module.exports = class Queryer{
             }
 
             this._getDbSize( (sizeResult)=>{
-                
-                let dtFrom = new Date();
-                dtFrom.setTime( dtNow.getTime() - 1 * 86400000 );    // minus 1 day
+                 
+                let dtNowUtc = new Date();
+                let dtFromUtc = new Date();    
+                dtFromUtc.setTime( dtNowUtc.getTime() - 1 * 86400000 );    // minus 1 day
 
-                this._samplingPer5min(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                this._samplingPer5min(dtFromUtc, dtNowUtc).toArray((error, weatherResult) =>{
                     if(error){
 
-                        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                        console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                                     + ": " 
                                     + ip 
                                     + "; "
@@ -529,7 +532,7 @@ module.exports = class Queryer{
                                     lastRecord: lastRecord,
                                     "size": sizeResult 
                                 });
-                    console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                    console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                                 + ": " 
                                 + ip 
                                 + "; "
@@ -555,12 +558,13 @@ module.exports = class Queryer{
 
             this._getDbSize( (sizeResult)=>{
                 
-                let dtFrom = new Date();
-                dtFrom.setTime( dtNow.getTime() - 7 * 86400000 );    // minus 7 day
+                let dtNowUtc = new Date();
+                let dtFromUtc = new Date();    
+                dtFromUtc.setTime( dtNowUtc.getTime() - 7 * 86400000 );    // minus 7 day
 
-                this._samplingPerHour(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                this._samplingPerHour(dtFromUtc, dtNowUtc).toArray((error, weatherResult) =>{
                     if(error){
-                        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                        console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                                     + ": " 
                                     + ip 
                                     + "; "
@@ -579,7 +583,7 @@ module.exports = class Queryer{
                                     lastRecord: lastRecord,
                                     "size": sizeResult 
                                 });
-                    console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                    console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                                 + ": " 
                                 + ip 
                                 + "; "
@@ -604,13 +608,14 @@ module.exports = class Queryer{
 
             this._getDbSize( (sizeResult)=>{
                 
-                let dtFrom = new Date();
-                dtFrom.setMonth(dtNow.getMonth() - 1);    // minus 1 month
+                let dtNowUtc = new Date();
+                let dtFromUtc = new Date();   
+                dtFromUtc.setMonth(dtNowUtc.getMonth() - 1);    // minus 1 month
 
-                this._samplingPer2hr(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                this._samplingPer2hr(dtFromUtc, dtNowUtc).toArray((error, weatherResult) =>{
                         if(error){
 
-                            console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                            console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                                         + ": " 
                                         + ip 
                                         + "; "
@@ -629,7 +634,7 @@ module.exports = class Queryer{
                                         lastRecord: lastRecord,
                                         "size": sizeResult 
                                     });
-                        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                        console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                                     + ": " 
                                     + ip 
                                     + "; "
@@ -654,13 +659,14 @@ module.exports = class Queryer{
 
         this._getDbSize( (sizeResult)=>{            
 
-            let dtFrom = new Date();
-            dtFrom.setMonth(dtNow.getMonth() - 6);    // minus 6 month
+            let dtNowUtc = new Date();
+            let dtFromUtc = new Date();  
+            dtFromUtc.setMonth(dtNow.getMonth() - 6);    // minus 6 month
 
-            this._samplingPerDay(dtFrom, dtNow).toArray((error, weatherResult) =>{
+            this._samplingPerDay(dtFromUtc, dtNowUtc).toArray((error, weatherResult) =>{
                 if(error){
 
-                    console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                    console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                                 + ": " 
                                 + ip 
                                 + "; "
@@ -679,7 +685,7 @@ module.exports = class Queryer{
                                 lastRecord: lastRecord,
                                 "size": sizeResult 
                             });
-                console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                             + ": " 
                             + ip 
                             + "; "
@@ -704,13 +710,14 @@ module.exports = class Queryer{
 
             this._getDbSize( (sizeResult)=>{
                     
-                let dtFrom = new Date();
-                dtFrom.setFullYear(dtNow.getFullYear() - 1);    // minus 1 year
+                let dtNowUtc = new Date();
+                let dtFromUtc = new Date();  
+                dtFromUtc.setFullYear(dtNow.getFullYear() - 1);    // minus 1 year
 
-                this._samplingPerDay(dtFrom, dtNow).toArray((error, weatherResult) =>{
+                this._samplingPerDay(dtFromUtc, dtNowUtc).toArray((error, weatherResult) =>{
                     if(error){
 
-                        console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                        console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                                     + ": " 
                                     + ip 
                                     + "; "
@@ -729,7 +736,7 @@ module.exports = class Queryer{
                                     lastRecord: lastRecord,
                                     "size": sizeResult 
                                 });
-                    console.log( timer.convert2IsoInLocaltimeZone(dtNow, true)
+                    console.log( timer.convert2IsoInLocaltimeZone(dtNow)
                                 + ": " 
                                 + ip 
                                 + "; "
