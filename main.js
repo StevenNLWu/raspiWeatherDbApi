@@ -88,7 +88,7 @@ app.use(function (req, res, next) {
 });
 
 
-app.get("/weather", (request, response) =>{
+app.get("/weather/api", (request, response) =>{
 
     try{
         let paraRange = request.query.dtRange;
